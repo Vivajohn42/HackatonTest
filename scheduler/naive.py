@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from simulator.models import A650Machine, MachineState, Plant, ProductionOrder
+from simulator.models import MachineState, Plant, ProductionOrder
 from scheduler.base import BaseScheduler
 
 
