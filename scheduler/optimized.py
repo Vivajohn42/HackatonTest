@@ -44,13 +44,7 @@ class OptimizedScheduler(BaseScheduler):
 
         return assignments
 
-    def _find_best_order(
-        self,
-        machine: A650Machine,
-        pending_orders: list[ProductionOrder],
-        plant: Plant,
-        current_time: float,
-    ) -> ProductionOrder | None:
+    def _find_best_order(self, machine, pending_orders, plant, current_time):
         best_score = float("-inf")
         best_order = None
         for order in pending_orders:
@@ -60,72 +54,70 @@ class OptimizedScheduler(BaseScheduler):
                 best_order = order
         return best_order
 
-    def _score_order(
-        self,
-        machine: A650Machine,
-        order: ProductionOrder,
-        plant: Plant,
-        current_time: float,
-    ) -> float:
+    def _score_order(self, machine, order, plant, current_time):
         score = 0.0
+        need_s1, need_s2 = machine.needs_changeover(order)
+        changeovers = int(need_s1) + int(need_s2)
+        score -= changeovers * 20.0
 
-        need_left, need_right = machine.needs_changeover(order)
-        changeovers = int(need_left) + int(need_right)
-        score -= changeovers * 10.0
+        if not need_s1 and not need_s2:
+            score += 30.0
 
-        if need_left:
-            ready_left = plant.get_ready_cassettes(order.cassette_type_left)
-            if ready_left:
-                score += 5.0
+        enough_s1, enough_s2 = machine.has_enough_terminals(order)
+        if not need_s1 and enough_s1:
+            score += 10.0
+        if not need_s2 and enough_s2:
+            score += 10.0
+
+        if need_s1:
+            ready = plant.get_ready_cassettes(order.cassette_type_s1)
+            if ready:
+                score += 8.0
             else:
-                available_left = plant.get_available_cassettes(order.cassette_type_left)
-                if not available_left:
+                available = plant.get_available_cassettes(order.cassette_type_s1)
+                if not available:
                     score -= 50.0
 
-        if need_right:
-            ready_right = plant.get_ready_cassettes(order.cassette_type_right)
-            if ready_right:
-                score += 5.0
+        if need_s2:
+            ready = plant.get_ready_cassettes(order.cassette_type_s2)
+            if ready:
+                score += 8.0
             else:
-                available_right = plant.get_available_cassettes(order.cassette_type_right)
-                if not available_right:
+                available = plant.get_available_cassettes(order.cassette_type_s2)
+                if not available:
                     score -= 50.0
 
         score += order.priority.value * 3.0
 
         if order.due_time is not None:
             remaining = order.due_time - current_time
-            if remaining < order.processing_time_min * 2:
-                score += 15.0
-            elif remaining < order.processing_time_min * 5:
-                score += 5.0
+            if remaining < order.processing_time_sec * 1.5:
+                score += 20.0
+            elif remaining < order.processing_time_sec * 3:
+                score += 8.0
 
         return score
 
-    def _prefetch_setups(
-        self,
-        pending_orders: list[ProductionOrder],
-        plant: Plant,
-        current_time: float,
-    ) -> None:
+    def _prefetch_setups(self, pending_orders, plant, current_time):
         sm = plant.setup_machine
         if sm.is_busy(current_time) and len(sm.queue) >= 2:
             return
 
         needed_types: dict[CassetteType, int] = defaultdict(int)
         for order in pending_orders[:20]:
-            needed_types[order.cassette_type_left] += 1
-            needed_types[order.cassette_type_right] += 1
+            needed_types[order.cassette_type_s1] += 1
+            needed_types[order.cassette_type_s2] += 1
 
         sorted_types = sorted(needed_types.items(), key=lambda x: -x[1])
 
         for ctype, _count in sorted_types:
-            ready = [
+            ready_or_setup = [
                 c for c in plant.cassette_pool
                 if c.cassette_type == ctype
-                and c.state in (CassetteState.READY, CassetteState.IN_SETUP)
+                and c.state in (CassetteState.READY, CassetteState.IN_SETUP, CassetteState.IN_USE)
+                and not c.is_depleted
             ]
-            if ready:
+            if ready_or_setup:
                 continue
 
             available = plant.get_available_cassettes(ctype)
