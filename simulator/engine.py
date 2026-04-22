@@ -118,9 +118,7 @@ class SimulationEngine:
         )
 
         for assignment in assignments:
-            order = assignment["order"]
-            machine = assignment["machine"]
-            self._start_order_on_machine(order, machine)
+            self._start_order_on_machine(assignment["order"], assignment["machine"])
 
         sm = self.plant.setup_machine
         if sm.is_busy(self.current_time):
@@ -178,7 +176,6 @@ class SimulationEngine:
             return
 
         changeover_time_sec = 0.0
-
         for side, ctype in sides_to_check:
             ready = self.plant.get_ready_cassettes(ctype)
             if ready:
@@ -210,8 +207,7 @@ class SimulationEngine:
         machine.current_order = order
         machine.state = MachineState.CHANGEOVER if changeover_time_sec > 0 else MachineState.PRODUCING
         machine.total_changeover_min += changeover_time_sec / 60
-
-        order.start_time = self.current_time + changeover_time_sec
+        order.start_time = self.current_time
 
         if changeover_time_sec > 0:
             self._add_event(Event(
@@ -292,7 +288,8 @@ class SimulationEngine:
             machine.total_production_min += order.processing_time_sec / 60
             machine.state = MachineState.IDLE
             machine.current_order = None
-            self.completed_orders.append(order)
+            if order not in self.completed_orders:
+                self.completed_orders.append(order)
 
             for slot in machine.all_slots():
                 if slot.is_depleted and slot.cassette is not None:
