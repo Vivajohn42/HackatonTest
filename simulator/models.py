@@ -219,7 +219,8 @@ class ProductionOrder:
 
     @property
     def processing_time_sec(self) -> float:
-        return self.leadsets * 60.0
+        # ~3-5 sec pro Leadset (CC-Maschine Durchschnitt)
+        return self.leadsets * 4.0
 
     @property
     def is_completed(self) -> bool:

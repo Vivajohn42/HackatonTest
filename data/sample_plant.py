@@ -14,21 +14,21 @@ from simulator.models import (
 
 
 ARTICLES = [
-    ("Kabelbaum KFZ-A",         "T-A", "T-B", 300),
-    ("Kabelbaum KFZ-B",         "T-A", "T-C", 250),
-    ("Steuerleitung CAN-Bus",   "T-C", "T-D", 400),
-    ("Sensorleitung Typ Y",     "T-B", "T-D", 200),
-    ("Motorleitung ML-1",       "T-C", "T-B", 180),
-    ("Gebaeudeverteilung GV-2", "T-D", "T-A", 500),
-    ("ABS-Sensorleitung",       "T-E", "T-F", 350),
-    ("Zuendkabel ZK-3",         "T-A", "T-D", 150),
-    ("Lichtkabel LK-1",         "T-B", "T-C", 220),
-    ("Klimaleitung KL-4",       "T-G", "T-H", 280),
+    ("Kabelbaum KFZ-A",         "T-A", "T-B", 800),
+    ("Kabelbaum KFZ-B",         "T-A", "T-C", 600),
+    ("Steuerleitung CAN-Bus",   "T-C", "T-D", 1000),
+    ("Sensorleitung Typ Y",     "T-B", "T-D", 500),
+    ("Motorleitung ML-1",       "T-C", "T-B", 450),
+    ("Gebaeudeverteilung GV-2", "T-D", "T-A", 1200),
+    ("ABS-Sensorleitung",       "T-E", "T-F", 700),
+    ("Zuendkabel ZK-3",         "T-A", "T-D", 350),
+    ("Lichtkabel LK-1",         "T-B", "T-C", 550),
+    ("Klimaleitung KL-4",       "T-G", "T-H", 650),
     ("Tuerverkabelung TV-2",    "T-E", "T-A", 190),
-    ("Heckleuchte HL-1",        "T-F", "T-B", 160),
-    ("Frontscheinwerfer FS-3",  "T-G", "T-D", 240),
-    ("Sitzheizung SH-2",        "T-H", "T-C", 310),
-    ("Dachantenne DA-1",        "T-E", "T-H", 120),
+    ("Heckleuchte HL-1",        "T-F", "T-B", 380),
+    ("Frontscheinwerfer FS-3",  "T-G", "T-D", 500),
+    ("Sitzheizung SH-2",        "T-H", "T-C", 750),
+    ("Dachantenne DA-1",        "T-E", "T-H", 300),
 ]
 
 
@@ -79,8 +79,10 @@ def create_orders(
 
     for i in range(num_orders):
         article_name, s1_key, s2_key, base_leadsets = rng.choice(ARTICLES)
-        leadsets = int(base_leadsets * rng.uniform(0.5, 1.5))
-        leadsets = max(50, min(600, leadsets))
+
+        # Variation: 300-1200 Leadsets
+        leadsets = int(base_leadsets * rng.uniform(0.6, 1.4))
+        leadsets = max(300, min(1200, leadsets))
 
         prio_roll = rng.random()
         if prio_roll < 0.05:
@@ -92,7 +94,7 @@ def create_orders(
         else:
             priority = OrderPriority.LOW
 
-        shift_sec = 36000.0
+        shift_sec = 36000.0  # 10h
         if priority == OrderPriority.URGENT:
             due_time = rng.uniform(3600, shift_sec * 0.4)
         elif priority == OrderPriority.HIGH:
